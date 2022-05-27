@@ -61,6 +61,8 @@ image_transport::Publisher image_pub;
 image_transport::Publisher debug_pub;
 ros::Publisher pose_pub1;
 ros::Publisher pose_pub2;
+ros::Publisher pixel_pub1;
+ros::Publisher pixel_pub2;
 std::string child_name1;
 std::string parent_name;
 std::string child_name2;
@@ -101,18 +103,38 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg)
         if (markers[i].id == marker_id1)
         {
           tf::Transform transform = aruco_ros::arucoMarker2Tf(markers[i]);
-          br.sendTransform(tf::StampedTransform(transform, curr_stamp, parent_name, child_name1));
+          tf::StampedTransform stampedTransform(transform, curr_stamp, parent_name, child_name1);
+          br.sendTransform(stampedTransform);
           geometry_msgs::Pose poseMsg;
           tf::poseTFToMsg(transform, poseMsg);
           pose_pub1.publish(poseMsg);
+
+          geometry_msgs::TransformStamped transformMsg;
+          tf::transformStampedTFToMsg(stampedTransform, transformMsg);
+          geometry_msgs::PointStamped pixelMsg;
+          pixelMsg.header = transformMsg.header;
+          pixelMsg.point.x = markers[i].getCenter().x;
+          pixelMsg.point.y = markers[i].getCenter().y;
+          pixelMsg.point.z = 0;
+          pixel_pub1.publish(pixelMsg);
         }
         else if (markers[i].id == marker_id2)
         {
           tf::Transform transform = aruco_ros::arucoMarker2Tf(markers[i]);
-          br.sendTransform(tf::StampedTransform(transform, curr_stamp, parent_name, child_name2));
+          tf::StampedTransform stampedTransform(transform, curr_stamp, parent_name, child_name1);
+          br.sendTransform(stampedTransform);
           geometry_msgs::Pose poseMsg;
           tf::poseTFToMsg(transform, poseMsg);
           pose_pub2.publish(poseMsg);
+
+          geometry_msgs::TransformStamped transformMsg;
+          tf::transformStampedTFToMsg(stampedTransform, transformMsg);
+          geometry_msgs::PointStamped pixelMsg;
+          pixelMsg.header = transformMsg.header;
+          pixelMsg.point.x = markers[i].getCenter().x;
+          pixelMsg.point.y = markers[i].getCenter().y;
+          pixelMsg.point.z = 0;
+          pixel_pub2.publish(pixelMsg);
         }
 
         // but drawing all the detected markers
@@ -240,6 +262,8 @@ int main(int argc, char **argv)
   debug_pub = it.advertise("debug", 1);
   pose_pub1 = nh.advertise<geometry_msgs::Pose>("pose", 100);
   pose_pub2 = nh.advertise<geometry_msgs::Pose>("pose2", 100);
+  pixel_pub1 = nh.advertise<geometry_msgs::PointStamped>("pixel1", 10);
+  pixel_pub2 = nh.advertise<geometry_msgs::PointStamped>("pixel2", 10);
 
   nh.param<double>("marker_size", marker_size, 0.05);
   nh.param<int>("marker_id1", marker_id1, 582);
